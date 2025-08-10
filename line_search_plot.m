@@ -34,9 +34,10 @@ c3 = 0;
 c4 = 0;
 
 %c初始点
-% t1 = 0.9;
+
 t1 = 0.9 + (1.12 - 0.9) * rand;
-fprintf('t1 = %.8f;',t1)
+t1 = 0.91035710;
+% fprintf('t1 = %.8f;',t1)
 f1 = LJ(epsi,sigma,t1);
 g1 = grad(epsi,sigma,t1);
 % fprintf('t1: %.8f, f1: %.4f, g1: %.4f, \n',t1,f1,g1);
@@ -46,7 +47,7 @@ h = abs(g1)/100;
 
 %循环线限制
 limit = 0;
-limit_max = 4;
+limit_max = 6;
 
 %subplot
 extention = 0.001;
@@ -56,6 +57,7 @@ sub_rows = ceil(limit_max/sub_cols);
 while (abs(g1) > accu && limit < limit_max)|| limit == 0
     limit = limit +1;
     fprintf('\n第 %d 个点,\n',limit);
+    fprintf('t1 = %.8f;\n',t1)
     fprintf('t1: %.8f, f1: %.4f, g1: %.4f, \n',t1,f1,g1);
     
     if g1 < 0
@@ -118,7 +120,7 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
 
         if ( t1<tNew && tNew<t2 )||( t1>tNew && tNew>t2 )
             %不允许跨过极小值点
-            if gNew * g1 > 0 || abs(gNew) < accu
+            if gNew * g1 > 0 || abs(gNew) < abs(g1)/2
                 t1 = tNew;
                 f1 = fNew;
                 g1 = gNew;
@@ -143,10 +145,9 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
         else
                 h = h/4;
                 t1 = (t1+t2)/2;
-                f1 = potential(epsilon,sigma,pointsList+    t1*dr,dimension,pointsNum);
-                g1 =  gradient(epsilon,sigma,pointsList+t1*dr,dimension,pointsNum)'*dr;
+                f1 = LJ(epsi,sigma,t1);
+                g1 = grad(epsi,sigma,t1);
                 fprintf('三次插值出错，取中点\n')
-
         end
 
     elseif abs(g2) < 2*abs(g1)
