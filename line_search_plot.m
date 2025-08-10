@@ -1,4 +1,5 @@
 %visualization of line search
+%本来想着每轮线搜索都画一下沿着搜索方向的线搜索迭代图，现在作罢
 
 clear %清理变量
 clf %清理图像
