@@ -73,11 +73,12 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
     g2 = grad(epsi,sigma,t2);
     fprintf('t2: %.8f, f2: %.4f, g2: %.4f,\n',t2,f2,g2)
 
-    % %绘制图像
-    % c1 = (g1+ g2- 2* (f2- f1)/ (b- a))/(b-a)^2;
-    % c2 = 3* (f2- f1)/(b- a)^2 - (2* g1+ g2)/(b- a);
-    % c3 = g1;
-    % c4 = f1;
+    if abs(g2) < accu %&& abs(g2) < abs(g1)
+        t1 = t2*2^sign(g1*g2);
+        f1 = f2;
+        g1 = g2;
+        break;
+    end
     
     if g1 * g2 < 0
 
