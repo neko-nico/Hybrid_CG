@@ -36,8 +36,8 @@ c4 = 0;
 
 %c初始点
 
-t1 = 0.9 + (1.12 - 0.9) * rand;
-% t1 = 0.90785657;
+t1 = 0.92 + (1.2 - 0.92) * rand;
+% t1 = 1.19122181;
 % fprintf('t1 = %.8f;',t1)
 f1 = LJ(epsi,sigma,t1);
 g1 = grad(epsi,sigma,t1);
@@ -48,7 +48,7 @@ h = abs(g1)/100;
 
 %循环线限制
 limit = 0;
-limit_max = 6;
+limit_max = 4;
 
 %subplot
 extention = 0.001;
@@ -160,7 +160,7 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
         end
 
         
-    elseif abs(g2) < 2*abs(g1)
+    elseif abs(g2) < 10*abs(g1) %|| f2 < f1
         
         %画图
         x = t1-extention:3*h/50:t1+3*h+extention;
