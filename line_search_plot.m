@@ -21,6 +21,7 @@ min_x = 2^(1/6)* sigma;
 %三阶插值近似求解的步长和精度
 a = 0;
 b = 0;
+condition_t = 0;
 change = 0;%函数值交换用的中间值
 accu = 0.01;
 s = 0;
@@ -36,7 +37,7 @@ c4 = 0;
 %c初始点
 
 t1 = 0.9 + (1.12 - 0.9) * rand;
-t1 = 0.91035710;
+% t1 = 0.90785657;
 % fprintf('t1 = %.8f;',t1)
 f1 = LJ(epsi,sigma,t1);
 g1 = grad(epsi,sigma,t1);
@@ -58,6 +59,7 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
     limit = limit +1;
     fprintf('\n第 %d 个点,\n',limit);
     fprintf('t1 = %.8f;\n',t1)
+    fprintf('h = %.8f;\n',h)
     fprintf('t1: %.8f, f1: %.4f, g1: %.4f, \n',t1,f1,g1);
     
     if g1 < 0
@@ -71,36 +73,38 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
     g2 = grad(epsi,sigma,t2);
     fprintf('t2: %.8f, f2: %.4f, g2: %.4f,\n',t2,f2,g2)
 
+    % %绘制图像
+    % c1 = (g1+ g2- 2* (f2- f1)/ (b- a))/(b-a)^2;
+    % c2 = 3* (f2- f1)/(b- a)^2 - (2* g1+ g2)/(b- a);
+    % c3 = g1;
+    % c4 = f1;
+    
     if g1 * g2 < 0
-        if h > 0
-                a = t1;
-                b = t2;
-        else
-                a = t2;
-                b = t1;
-                change = f1;
-                f1 = f2;
-                f2 = change;
-        end
 
-        s = 3* (f2 - f1)/ (b - a);
+        condition_t = t2 < t1;
+
+        s = 3* (f2 - f1)/ (t2 - t1);
         z = s - g1 - g2;
         w = sqrt(z*z - g1*g2);
 
-        tNew = t1 + (b-a)* (1- (g2+ w+ z)/(g2- g1+ 2*w));
+        tNew = (1-condition_t)*t1 + condition_t*t2 +...
+               (-1)^condition_t * (t2-t1)*...
+               (1- ( (1-condition_t)*g2 + condition_t*g1 + w+ z)/...
+               ((-1)^condition_t*(g2- g1) + 2*w));
+
         fNew = LJ(epsi,sigma,tNew);
         gNew = grad(epsi,sigma,tNew);
-        fprintf('求解出的新点：a1: %.8f, f1: %.4f, g1: %.4f, \n',tNew,fNew,gNew);
+        fprintf('求解出的新点：tNew: %.8f, fNew: %.4f, gNew: %.4f, \n',tNew,fNew,gNew);
 
         %绘制图像
-        c1 = (g1+ g2- 2* (f2- f1)/ (b- a))/(b-a)^2;
-        c2 = 3* (f2- f1)/(b- a)^2 - (2* g1+ g2)/(b- a);
+        c1 = (g1+ g2- 2* (f2- f1)/ (t2- t1))/(t2-t1)^2;
+        c2 = 3* (f2- f1)/(t2- t1)^2 - (2* g1+ g2)/(t2- t1);
         c3 = g1;
         c4 = f1;
 
-        x = a-extention:(b-a)/50:b+extention;
+        x = t1+ sign(g1)* extention:(t2-t1)/1000:t2- sign(g1)* extention;
         y1 = LJ(epsi,sigma,x);
-        y2 = cubicInterpolation(x,a,c1,c2,c3,c4);
+        y2 = cubicInterpolation(x,t1,c1,c2,c3,c4);
 
         subplot(sub_rows,sub_cols,limit)
         plot(x, y1, x, y2, 'LineWidth', 1);
@@ -111,6 +115,9 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
 
         %绘制箭头
         hold on;
+        plot([t1, t2], [f1, f2], 'g-', 'LineWidth', 1.5);
+        text((t1+t2)/2, (f1+f2)/2,['h = ',num2str(h)]);
+        
         %quiver(t1,f1,tNew-t1,fNew-f1, 'r', 'LineWidth', 1.5, 'MaxHeadSize', 1/norm([tNew-t1,fNew-f1]));
         plot([t1, tNew], [f1, fNew], 'm-', 'LineWidth', 1.5);
         text((t1+tNew)/2, (f1+fNew)/2,['\Deltat = ',num2str(tNew-t1)]);
@@ -133,14 +140,16 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
             if abs(gNew) > accu || limit == 1
                 h = h/6;
                 fprintf('步长 h 太长了！！ %.5f\n',h);
-            end
+           
+                h = -sign(g1)*abs(h);
+                plot([t1, t1+h], [f1, LJ(epsi,sigma,t1+h)], 'r-', 'LineWidth', 1.5);
+                text(t1+h/2, (f1+LJ(epsi,sigma,t1+h))/2,['h = ',num2str(h)]);
+                fprintf('下一轮迭代 h = %.8f\n',h);
+                plot(min_x,LJ(epsi,sigma,min_x),'kx')
+                legend('LJ势能曲线','cubic拟合曲线','初始区间','当前迭代','下一轮迭代')
+                hold off
 
-            plot([t1, t1+h], [f1, LJ(epsi,sigma,t1+h)], 'r-', 'LineWidth', 1.5);
-            text(t1+h/2, (f1+LJ(epsi,sigma,t1+h))/2,['h = ',num2str(h)]);
-            fprintf('下一轮迭代 h = %.8f\n',h);
-            plot(min_x,LJ(epsi,sigma,min_x),'kx')
-            legend('LJ势能曲线','cubic拟合曲线','当前迭代','下一轮迭代')
-            hold off
+            end
 
         else
                 h = h/4;
@@ -150,9 +159,9 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
                 fprintf('三次插值出错，取中点\n')
         end
 
+        
     elseif abs(g2) < 2*abs(g1)
         
-
         %画图
         x = t1-extention:3*h/50:t1+3*h+extention;
         y1 = LJ(epsi,sigma,x);
@@ -166,6 +175,9 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
         
         %绘制箭头
         hold on;
+        plot([t1, t2], [f1, f2], 'g-', 'LineWidth', 1.5);
+        text((t1+t2)/2, (f1+f2)/2,['h = ',num2str(h)]);
+
         %quiver(t1,f1,tNew-t1,fNew-f1, 'r', 'LineWidth', 1.5, 'MaxHeadSize', 1/norm([tNew-t1,fNew-f1]));
         plot([t1, t2], [f1, f2], 'm-', 'LineWidth', 1.5);
         text((t1+t2)/2, (f1+f2)/2,['h = ',num2str(h)]);
@@ -182,7 +194,7 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
         fprintf('下一轮迭代 h = %.8f\n',h);
         plot(min_x,LJ(epsi,sigma,min_x),'kx')
 
-        legend('LJ势能曲线','当前迭代','下一轮迭代')
+        legend('LJ势能曲线','初始区间','当前迭代','下一轮迭代')
         hold off
     else
         h = h/6;
