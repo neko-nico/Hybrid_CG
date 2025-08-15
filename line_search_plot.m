@@ -23,7 +23,7 @@ a = 0;
 b = 0;
 condition_t = 0;
 change = 0;%函数值交换用的中间值
-accu = 0.01;
+accu = 0.1;
 s = 0;
 z = 0;
 w = 0;
@@ -37,7 +37,7 @@ c4 = 0;
 %c初始点
 
 t1 = 0.92 + (1.2 - 0.92) * rand;
-% t1 = 1.19122181;
+% t1 = 0.96;
 % fprintf('t1 = %.8f;',t1)
 f1 = LJ(epsi,sigma,t1);
 g1 = grad(epsi,sigma,t1);
@@ -45,10 +45,11 @@ g1 = grad(epsi,sigma,t1);
 
 %步长
 h = abs(g1)/100;
+% h = 2*f1/g1;
 
 %循环线限制
 limit = 0;
-limit_max = 4;
+limit_max = 2;
 
 %subplot
 extention = 0.001;
@@ -150,14 +151,18 @@ while (abs(g1) > accu && limit < limit_max)|| limit == 0
                 legend('LJ势能曲线','cubic拟合曲线','初始区间','当前迭代','下一轮迭代')
                 hold off
 
+            else
+
+                legend('LJ势能曲线','cubic拟合曲线','初始区间','当前迭代')
             end
 
+
         else
-                h = h/4;
-                t1 = (t1+t2)/2;
-                f1 = LJ(epsi,sigma,t1);
-                g1 = grad(epsi,sigma,t1);
-                fprintf('三次插值出错，取中点\n')
+            h = h/4;
+            t1 = (t1+t2)/2;
+            f1 = LJ(epsi,sigma,t1);
+            g1 = grad(epsi,sigma,t1);
+            fprintf('三次插值出错，取中点\n')
         end
 
         
