@@ -10,6 +10,31 @@ set(groot, 'defaultTextFontName', 'Times New Roman', 'defaultTextFontSize', 14);
 % set(0, 'DefaultLineMarkerSize', 12);  % 设置默认点的半径
 % %set(0,'DefaultAxesFontName','Times New Roman','DefaultAxesFontSize',20,'DefaultTextFontSize',20,'DefaultLineLineWidth',2,'DefaultLineMarkerSize',15);
 
+%结果输出
+
+%定义输出文件夹
+folderName = 'Result';
+
+% 如果文件夹不存在，则创建
+if ~exist(folderName, 'dir')
+    mkdir(folderName);
+end
+
+
+% 获取当前时间（格式：YYYYmmdd-HHMMSS）
+time_format = datetime('now','Format','MMdd-HHmmss');
+timeStr = char(time_format);   % 转成字符串
+
+% 拼接日志文件名
+logFileName = fullfile(folderName, [timeStr '_log_' '.txt']);
+% 打开文件（写入模式，若文件已存在则覆盖）
+logfid = fopen(logFileName,'w');
+
+% 判断文件是否成功打开
+if logfid == -1
+    error('无法创建日志文件');
+end
+
 %系统编号
 systemNum = 1;
 
@@ -46,14 +71,14 @@ for i = 2:pointsNum
     while norm(randomPoint) > iniRange || minDis(1) < 0.9* r0Prm
         randomPoint = (2*rand(dimension,1)-1)*iniRange;
         minDis = distence(pointsList,randomPoint,dimension);
-        %fprintf('太近了，重开\n')
+        % fprintf(logfid, '太近了，重开\n');
     end
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
-% load('pointsList_1.mat');
-save(['pointsList_',num2str(systemNum)],'pointsList')
+load(fullfile(folderName, ['0908-200624_pointsList_1' '.mat']));
 
+save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '.mat']),'pointsList')
 
 neighbor = neighborMatrix(pointsList,rcPrm,dimension,pointsNum);
 eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
@@ -68,18 +93,21 @@ glist = gr;
 dlist = dr;
 elist = energy;
 %搜索步长
-h = max(abs(gr))/4;
-%fprintf('初始步长: %.4f\n',h)
+h = max(abs(gr))/40;
+fprintf(logfid, '初始步长: %.4f\n',h);
 % hlist = h;
 % section = 1;
 nantest = 0; %检测NaN报错
-maxMove = 0.1;
+maxMove = 0.6;
+%搜索方向改变的角度
+ang = 0;
+anglist = 0;
 
 %三阶插值近似求解的步长和精度
 a = 0;
 b = 0;
 change = 0;%函数值交换用的中间值
-accu = 0.1;
+accu = 1;
 s = 0;
 z = 0;
 w = 0;
@@ -88,9 +116,15 @@ w = 0;
 times = 0;
 timeTotal = 0;
 
+
 while norm(gr) > 0.005 && times < 500
     times = times + 1;
-    %fprintf('\n第 %d 个点,\n',times);
+    fprintf(logfid, '\n第 %d 个点, 总循环数: %d\n',times,timeTotal);
+
+    % if timeTotal == 271
+    %     keyboard;  % 程序暂停，进入调试模式
+    %     fprintf(logfid, '调试模式\n');
+    % end
 
     %三阶插值
     t1 = 0;
@@ -98,11 +132,11 @@ while norm(gr) > 0.005 && times < 500
     eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
     f1 = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
     g1 = gr'*dr;
-    %fprintf('t1: %.8f, f1: %.4f, g1: %.4f, \n',t1,f1,g1);
+    fprintf(logfid, 't1: %.8f, f1: %.4f, g1: %.4f, \n',t1,f1,g1);
 
     if h > 5
         h = 1;
-        fprintf('change the step - h\n');
+        fprintf(logfid, 'change the step - h\n');
     end
 
     limit = 0;
@@ -122,20 +156,20 @@ while norm(gr) > 0.005 && times < 500
         eleDensity = electrondensity(pointsListMid,r0Prm,betaPrm,neighbor,dimension,pointsNum);
         f2 = potential(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
         g2 =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
-        %fprintf('t2: %.8f, f2: %.4f, g2: %.4f,\n',t2,f2,g2)
+        fprintf(logfid, 't2: %.8f, f2: %.4f, g2: %.4f,\n',t2,f2,g2);
 
-        if abs(g2) < accu %&& abs(g2) < abs(g1)
-            t1 = t2*2^sign(g1*g2);
-            f1 = f2;
-            g1 = g2;
-            %fprintf('结束，点已满足\n')
-            %fprintf('点： %.8f , f: %.6f , g: %.6f \n',t1,f1,g1);
-            timeTotal = timeTotal + 1;
-            elist = [elist,f1];
-%             h = t1;
-%             hlist = [hlist,h];
-            break;
-        end
+        % if abs(g2) < accu %&& abs(g2) < abs(g1)
+        %     t1 = t2*2^sign(g1*g2);
+        %     f1 = f2;
+        %     g1 = g2;
+        %     fprintf(logfid, '结束，点已满足\n');
+        %     fprintf(logfid, '点： %.8f , f: %.6f , g: %.6f \n',t1,f1,g1);
+        %     timeTotal = timeTotal + 1;
+        %     elist = [elist,f1];
+        %     % h = t1;
+        %     % hlist = [hlist,h];
+        %     break;
+        % end
 
         if g1 * g2 < 0
 
@@ -155,22 +189,22 @@ while norm(gr) > 0.005 && times < 500
             eleDensity = electrondensity(pointsListMid,r0Prm,betaPrm,neighbor,dimension,pointsNum);
             fNew = potential(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
             gNew =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
-            %fprintf('求解出的新点：aNew: %.8f, fNew: %.4f, gNew: %.4f, \n',tNew,fNew,gNew);
+            fprintf(logfid, '求解出的新点：aNew: %.8f, fNew: %.4f, gNew: %.4f, \n',tNew,fNew,gNew);
 
             if ( t1<tNew && tNew<t2 )||( t1>tNew && tNew>t2 )
                 if gNew * g1 > 0 || abs(gNew) < abs(g1)/2
                     t1 = tNew;
                     f1 = fNew;
                     g1 = gNew;
-                    %fprintf('取了新的点！\n')
+                    fprintf(logfid, '取了新的点！\n');
                 else
-                    %fprintf('没有取新的点…\n')
+                    fprintf(logfid, '没有取新的点…\n');
                     h = h*1.5;%少收缩一些
                 end
                 
                 if abs(gNew) > accu || limit == 1
                     h = h/6;
-                    %fprintf('步长 h 太长了！！ %.5f\n',h);
+                    fprintf(logfid, '步长 h 太长了！！ %.5f\n',h);
                 end
             else
                 h = h/4;
@@ -180,40 +214,42 @@ while norm(gr) > 0.005 && times < 500
                 eleDensity = electrondensity(pointsListMid,r0Prm,betaPrm,neighbor,dimension,pointsNum);
                 f1 = potential(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
                 g1 =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
-                %fprintf('三次插值出错，取中点\n')
+                fprintf(logfid, '三次插值出错，取中点\n');
             end
         elseif abs(g2) < 10*abs(g1)
             h = 2*h;
             t1 = t2;
             f1 = f2;
             g1 = g2;
-            %fprintf('前进,而且步长 h 太短了…… %.5f\n',h);
+            fprintf(logfid, '前进,而且步长 h 太短了…… %.5f\n',h);
         else
             h = h/6;
-            %fprintf('梯度异常返回, h: %.5f\n',h);
+            fprintf(logfid, '梯度异常返回, h: %.5f\n',h);
         end
         timeTotal = timeTotal + 1;
         elist = [elist,f1];
-%         hlist = [hlist,h];
+        % hlist = [hlist,h];
     end
 
     if t1 == 0
         t1 = t1 + h;
     end
 
-    %fprintf('总循环数:%d\n',timeTotal)
-%     fprintf('t1:%.4f\n',t1)
-
     h = abs(t1);
+    
     k = k + 1;
-%     section = [section,timeTotal];
+    % section = [section,timeTotal];
 
-    %限制最大位移
-    %fprintf('不限制下最大的移动距离: %.4f\n',max(abs(t1*dr)));
-    move = t1*dr;
-    indicesMax = abs(move) > maxMove;
-    move(indicesMax) = sign(move(indicesMax)) * maxMove;
-    pointsList = pointsList + move;
+    if 1
+        %限制最大位移
+        fprintf(logfid, '不限制下最大的移动距离: %.4f\n',max(abs(t1*dr)));
+        move = t1*dr;
+        indicesMax = abs(move) > maxMove;
+        move(indicesMax) = sign(move(indicesMax)) * maxMove;
+        pointsList = pointsList + move;
+    else
+        pointsList = pointsList + t1*dr;
+    end
 
 %     %拉回远离的原子
 %     avgDisList = averageDistence2List(pointsList,dimension,pointsNum);
@@ -231,7 +267,7 @@ while norm(gr) > 0.005 && times < 500
 %         targetPi = targetPi(2);
 %         targetPi = pointsList((targetPi-1)*dimension+1:targetPi*dimension);
 %         pointsList((indixi-1)*dimension+1:indixi*dimension) = targetPi + r0Prm*(farPi-targetPi)/norm(farPi-targetPi);
-%         %fprintf('移动了 %d 个原子\n',i)
+%         fprintf(logfid, '移动了 %d 个原子\n',i)
 %     end
 
     neighbor = neighborMatrix(pointsList,rcPrm,dimension,pointsNum);
@@ -239,10 +275,10 @@ while norm(gr) > 0.005 && times < 500
     gr = gradient(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
 
     if any(isnan(gr))
-        %disp('gr = NaN, 退出\n');
+        disp('gr = NaN, 退出\n');
         break;
     end
-    glist = [glist,gr];
+    glist = [glist, gr];
 
     g_k = gr;
     y_k1 = g_k - glist(:,k-1);
@@ -254,45 +290,85 @@ while norm(gr) > 0.005 && times < 500
     beta_N = max(0,min(beta_DY,beta_MHS));
 
     dr = -(1+ beta_N* (g_k'* d_k1)/ norm(g_k)^2)* g_k+ beta_N*d_k1;
-    dlist = [dlist,dr];
+    dlist = [dlist, dr];
 
+    ang = acosd(dot(dr,d_k1)/ (norm(dr)* norm(d_k1)));
+    anglist = [anglist, ang];
 
+    fprintf(logfid, '总循环数:%d, 总步长:%.4f, dr变化角度:%.4f\n',timeTotal, t1, ang);
+    
 end
 
 neighbor = neighborMatrix(pointsList,rcPrm,dimension,pointsNum);
 eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
 energy = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
-fprintf('最终点能量：%.4f,梯度模长：%.6f\n',energy,norm(gr))
+fprintf(logfid, '最终点能量：%.4f,梯度模长：%.6f\n',energy,norm(gr));
 
 recordList = [energy;times;timeTotal;nantest];
 
-fileID = fopen('Result.txt','w');
-fprintf(fileID,'%d_%.4f_%d_%d_%d\n', systemNum, energy, times, timeTotal,nantest);
+% resultfid = fopen('Result.txt','w');
+% fprintf(resultfid,'%d_%.4f_%d_%d_%d\n', systemNum, energy, times, timeTotal,nantest);
+% fclose(resultfid);
 
-save(['Result_',num2str(systemNum)],'pointsList','elist','nantest','energy','times','timeTotal')
+save(fullfile(folderName, [timeStr '_Result_' num2str(systemNum)]), ...
+    'pointsList','elist','nantest','energy','times','timeTotal')
 
-
+%图片保存目录
+dir2pic = fullfile(folderName, 'pic');
+if ~exist(dir2pic, 'dir')
+    mkdir(dir2pic);
+end
 
 % 能量下降曲线
-figure('Position', [40, 680, 700, 600]);xlist= 1:length(elist);
+f1 = figure('Position', [40, 680, 700, 600]);xlist= 1:length(elist);
 elist2 = log(elist-min(elist)+0.001)/log(10);
 plot(xlist,elist2,xlist,elist2,'r.')
 xlabel(['迭代次数,搜索方向改变',num2str(times),'次']), ylabel('体系能量');
 title(['能量下降曲线，总循环数：',num2str(timeTotal)])
 
-% 画出所有点的坐标
-figure('Position', [740, 680, 700, 600]);
+path2pic = fullfile(dir2pic, [timeStr '_energy']);
+set(f1,'PaperPositionMode','auto');
+print(f1, [path2pic '.jpg'], '-djpeg', '-r300');
+print(f1, [path2pic '.svg'], '-dsvg');
+savefig(f1, [path2pic '.fig']);
+
+% 绘制所有点的坐标
+f2 = figure('Position', [740, 680, 700, 600]);
 midList = 1:3:n;
 %plot3(pointsList(midList),pointsList(midList+1),pointsList(midList+2),'.');
 scatter3(pointsList(midList), pointsList(midList+1), pointsList(midList+2), 20, 'b', 'filled'); 
 title('所有点的位置图');
 
-fprintf('finish!\n')
+path2pic = fullfile(dir2pic, [timeStr '_points']);
+set(f2,'PaperPositionMode','auto');
+print(f2, [path2pic '.jpg'], '-djpeg', '-r300');
+print(f2, [path2pic '.svg'], '-dsvg');
+savefig(f2, [path2pic '.fig']);
+
+% 搜索方向改变的夹角变化
+f3 = figure('Position', [1440, 680, 700, 600]);
+plot(anglist)
+xlabel('循环次数')     % x轴标签
+ylabel('夹角')   % y轴标签
+title('搜索方向改变角度')  % 图标题
+
+path2pic = fullfile(dir2pic, [timeStr '_angle']);
+set(f3,'PaperPositionMode','auto');
+print(f3, [path2pic '.jpg'], '-djpeg', '-r300');
+print(f3, [path2pic '.svg'], '-dsvg');
+savefig(f3, [path2pic '.fig']);
 
 
-%writeVestaFile('output.vesta',pointsList,dimension,pointsNum)
+fprintf(logfid,'\nsystemNum:%d, energy:%.4f, times:%d, timeTotal:%d, nantest:%d\n', ...
+                systemNum, energy, times, timeTotal,nantest);
+fprintf(logfid, 'All finish!\n');
+fclose(logfid);
+winopen(fullfile(folderName, [timeStr '_log_' '.txt']));
+%system(['open ', logFile]); for Mac
+%system(['xdg-open ', logFile]); for Linux
 
-
+writeVestaFile(fullfile(folderName, [timeStr '_output' '.vesta']), ...
+               pointsList,dimension,pointsNum)
 
 %所有近邻
 function out = neighborMatrix(pointsList,rc,dim,num)
@@ -425,41 +501,41 @@ function writeVestaFile(filename,pointsList,dimension,pointsNum)
     text2 = fileread("origin2.txt");
     text3 = fileread("origin3.txt");
     text4 = fileread("origin4.txt");
-    fileID = fopen(filename,'w');
+    vestafileID = fopen(filename,'w');
     
-    fprintf(fileID,text0);
+    fprintf(vestafileID,text0);
     cellP = 1:dimension:dimension*pointsNum;
     cellP = [max(pointsList(cellP))-min(pointsList(cellP)),...
              max(pointsList(cellP+1))-min(pointsList(cellP+1)),...
              max(pointsList(cellP+2))-min(pointsList(cellP+2)),];
-    fprintf(fileID,' %9.6f  %9.6f  %9.6f  ',cellP);
-    fprintf(fileID,text1);
+    fprintf(vestafileID,' %9.6f  %9.6f  %9.6f  ',cellP);
+    fprintf(vestafileID,text1);
     
     pointsList = 0.98*(pointsList-min(pointsList))/(max(pointsList)-min(pointsList));
     
     for i = 1:pointsNum
-        fprintf(fileID,'  %d  C         C%d  1.0000   %1.6f   %1.6f   %1.6f    1a       1\n',i,i,pointsList(dimension*i-2),pointsList(dimension*i-1),pointsList(dimension*i));
-        fprintf(fileID,'                            0.000000   0.000000   0.000000  0.00\n');
+        fprintf(vestafileID,'  %d  C         C%d  1.0000   %1.6f   %1.6f   %1.6f    1a       1\n',i,i,pointsList(dimension*i-2),pointsList(dimension*i-1),pointsList(dimension*i));
+        fprintf(vestafileID,'                            0.000000   0.000000   0.000000  0.00\n');
     end
     
-    fprintf(fileID,'  0 0 0 0 0 0 0\n');
-    fprintf(fileID,'THERI 1\n');
+    fprintf(vestafileID,'  0 0 0 0 0 0 0\n');
+    fprintf(vestafileID,'THERI 1\n');
     
     for i = 1:pointsNum
-        fprintf(fileID,'  %d         C%d  0.050000\n',i,i);
+        fprintf(vestafileID,'  %d         C%d  0.050000\n',i,i);
     end
     
-    fprintf(fileID,text2);
+    fprintf(vestafileID,text2);
     
     for i = 1:pointsNum
-        fprintf(fileID,'  %d         C%d  %5.4f 128  73  41 128  73  41 204  0\n',i,i,3/pointsNum^(1/dimension));
+        fprintf(vestafileID,'  %d         C%d  %5.4f 128  73  41 128  73  41 204  0\n',i,i,3/pointsNum^(1/dimension));
     end
     
-    fprintf(fileID,text3);
-    fprintf(fileID,'%1.4f',5/pointsNum^(1/dimension));
-    fprintf(fileID,text4);
+    fprintf(vestafileID,text3);
+    fprintf(vestafileID,'%1.4f',5/pointsNum^(1/dimension));
+    fprintf(vestafileID,text4);
     
-    fclose(fileID);
+    fclose(vestafileID);
 end
 
 
