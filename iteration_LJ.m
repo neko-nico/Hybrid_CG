@@ -76,7 +76,7 @@ for i = 2:pointsNum
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
-load(fullfile(folderName, '0909-162733_pointsList_1.mat'));
+load(fullfile(folderName, '0909-192747_pointsList_1.mat'));
 % load('pointsList_1.mat');
 
 save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '.mat']),'pointsList')
@@ -97,7 +97,7 @@ fprintf(logfid, '初始步长: %.6f\n',h);
 %hlist = h;
 %section = 1;
 nantest = 0; %检测NaN报错
-maxMove = 0.1;
+maxMove = 0.15;
 %搜索方向改变的角度
 ang = 0;
 anglist = 0;
@@ -119,7 +119,7 @@ while norm(gr) > 0.005 && times < 1000
     times = times + 1;
     fprintf(logfid, '\n第 %d 个点, 总循环数: %d, 梯度模长: %.6f\n',times, timeTotal, norm(gr));
 
-    if timeTotal == 719 && 1
+    if timeTotal == 218 && 0
 
         %清理log文件夹，保留最后几行
         fclose(logfid);
@@ -207,7 +207,7 @@ while norm(gr) > 0.005 && times < 1000
             fprintf(logfid, '求解出的新点：tNew: %.8f, fNew: %.6f, gNew: %.6f, \n',tNew,fNew,gNew);
 
             if ( t1<tNew && tNew<t2 )||( t1>tNew && tNew>t2 )
-                if gNew * g1 > 0 || abs(gNew) < abs(g1)/2
+                if  abs(gNew) < abs(g1)/2
                     t1 = tNew;
                     f1 = fNew;
                     g1 = gNew;
@@ -217,7 +217,7 @@ while norm(gr) > 0.005 && times < 1000
                     h = h*1.5;%少收缩一些
                 end
                 
-                if abs(gNew) > accu || limit == 1
+                if abs(gNew) > accu %|| limit == 1
                     h = h/6;
                     fprintf(logfid, '步长 h 太长了！！ %.5f\n',h);
                 end
@@ -257,11 +257,12 @@ while norm(gr) > 0.005 && times < 1000
 
     if 1
         %限制最大位移
-        fprintf(logfid, '不限制下最大的移动距离: %.6f\n',max(abs(t1*dr)));
         move = t1*dr;
+        fprintf(logfid, '不限制下最大的移动距离: %.6f，',max(abs(move)));
         indicesMax = abs(move) > maxMove;
         move(indicesMax) = sign(move(indicesMax)) * maxMove;
         pointsList = pointsList + move;
+        fprintf(logfid, '修正了 %d 个原子\n', sum(indicesMax));
     else
         pointsList = pointsList + t1*dr;
     end
@@ -341,7 +342,7 @@ end
 % 能量下降曲线
 f1 = figure('Position', [40, 680, 700, 600]);
 xlist= 1:length(elist);
-elist2 = log(elist-min(elist)+0.001)/log(10);
+elist2 = log(elist-min(elist)+0.0001)/log(10);
 plot(xlist,elist2,xlist,elist2,'r.')
 xlabel(['迭代次数,搜索方向改变',num2str(times),'次']), ylabel('体系能量');
 title(['能量下降曲线，总循环数：',num2str(timeTotal)])

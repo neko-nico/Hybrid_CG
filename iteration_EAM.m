@@ -104,7 +104,7 @@ fprintf(logfid, '初始步长: %.6f\n',h);
 % hlist = h;
 % section = 1;
 nantest = 0; %检测NaN报错
-maxMove = 0.6;
+maxMove = 0.15;
 %搜索方向改变的角度
 ang = 0;
 anglist = 0;
@@ -222,7 +222,7 @@ while norm(gr) > 0.005 && times < 500
             fprintf(logfid, '求解出的新点：tNew: %.8f, fNew: %.6f, gNew: %.6f, \n',tNew,fNew,gNew);
 
             if ( t1<tNew && tNew<t2 )||( t1>tNew && tNew>t2 )
-                if gNew * g1 > 0 || abs(gNew) < abs(g1)/2
+                if abs(gNew) < abs(g1)/2 %gNew * g1 > 0 || abs(gNew) < abs(g1)/2
                     t1 = tNew;
                     f1 = fNew;
                     g1 = gNew;
@@ -232,7 +232,7 @@ while norm(gr) > 0.005 && times < 500
                     h = h*1.5;%少收缩一些
                 end
                 
-                if abs(gNew) > accu || limit == 1
+                if abs(gNew) > accu %|| limit == 1
                     h = h/6;
                     fprintf(logfid, '步长 h 太长了！！ %.5f\n',h);
                 end
@@ -275,11 +275,12 @@ while norm(gr) > 0.005 && times < 500
 
     if 1
         %限制最大位移
-        fprintf(logfid, '不限制下最大的移动距离: %.6f\n',max(abs(t1*dr)));
         move = t1*dr;
+        fprintf(logfid, '不限制下最大的移动距离: %.6f，',max(abs(move)));
         indicesMax = abs(move) > maxMove;
         move(indicesMax) = sign(move(indicesMax)) * maxMove;
         pointsList = pointsList + move;
+        fprintf(logfid, '修正了 %d 个原子\n', sum(indicesMax));
     else
         pointsList = pointsList + t1*dr;
     end
