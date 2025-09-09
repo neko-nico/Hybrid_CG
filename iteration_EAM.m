@@ -81,7 +81,8 @@ for i = 2:pointsNum
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
-load(fullfile(folderName, '0909-151346_pointsList_1.mat'));
+% load(fullfile(folderName, '0909-151346_pointsList_1.mat'));
+% load('check_pointsList_origin.mat');
 
 save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '.mat']),'pointsList')
 
@@ -124,18 +125,18 @@ timeTotal = 1;
 
 while norm(gr) > 0.005 && times < 500
     times = times + 1;
-    fprintf(logfid, '\n第 %d 个点, 总循环数: %d\n',times,timeTotal);
+    fprintf(logfid, '\n第 %d 个点, 总循环数: %d, 梯度模长: %.6f\n',times, timeTotal, norm(gr));
 
-    if timeTotal == 289 %&& 0
+    if timeTotal == 289 && 0
 
         %清理log文件夹，保留最后几行
         fclose(logfid);
         % 读取整个文件内容
         logfileContent = fileread(logFileName);
         lines = regexp(logfileContent, '\r?\n', 'split');  % 按行拆分
-        % 只保留最后 5 行
-        if numel(lines) > 7
-            lines = lines(end-4:end);  % 保留最后 5 行
+        % 只保留最后 n 行
+        if numel(lines) > 10 %确保有 n 行
+            lines = lines(end-7:end);  % 保留最后 7 行
         end
         % 重新写入文件（覆盖模式）
         logfid = fopen(logFileName, 'w');
@@ -187,7 +188,8 @@ while norm(gr) > 0.005 && times < 500
         fprintf(logfid, 't2: %.8f, f2: %.6f, g2: %.6f,\n',t2,f2,g2);
 
         % if abs(g2) < accu %&& abs(g2) < abs(g1)
-        %     t1 = t2*2^sign(g1*g2);
+        %     h = h*2^sign(g1*g2);
+        %     t1 = t2;
         %     f1 = f2;
         %     g1 = g2;
         %     fprintf(logfid, '结束，点已满足\n');
@@ -217,7 +219,7 @@ while norm(gr) > 0.005 && times < 500
             eleDensity = electrondensity(pointsListMid,r0Prm,betaPrm,neighbor,dimension,pointsNum);
             fNew = potential(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
             gNew =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
-            fprintf(logfid, '求解出的新点：aNew: %.8f, fNew: %.6f, gNew: %.6f, \n',tNew,fNew,gNew);
+            fprintf(logfid, '求解出的新点：tNew: %.8f, fNew: %.6f, gNew: %.6f, \n',tNew,fNew,gNew);
 
             if ( t1<tNew && tNew<t2 )||( t1>tNew && tNew>t2 )
                 if gNew * g1 > 0 || abs(gNew) < abs(g1)/2
