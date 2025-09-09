@@ -1,8 +1,8 @@
 %嵌入原子势
 
 clear
-set(0, 'DefaultAxesFontName', '宋体', 'DefaultAxesFontSize', 20);  % 设置坐标轴标签的默认字体和大小
-set(0, 'DefaultTextFontSize', 20);  % 设置文本的默认字体大小
+set(0, 'DefaultAxesFontName', '宋体', 'DefaultAxesFontSize', 15);  % 设置坐标轴标签的默认字体和大小
+set(0, 'DefaultTextFontSize', 15);  % 设置文本的默认字体大小
 
 %体系维数+粒子数目
 dimension = 3;
@@ -42,6 +42,8 @@ for i = 2:pointsNum
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
+load('E:\MatlabProjects\hybrid_CG\Result\0909-152035_pointsList_1.mat');
+
 neighbor = neighborMatrix(pointsList,rcPrm,dimension,pointsNum);
 eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
 energy = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
@@ -49,7 +51,7 @@ gr = gradient(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,
 dr = - gr;
 
 %取样点
-sample = 50;
+sample = 100;
 
 %用数组记录grad,direction,energy,h,方向变化间隔
 k = 1;
@@ -58,7 +60,8 @@ glist = gr;
 dlist = dr;
 elist = energy;
 %搜索步长
-h = 1.2* max(abs(gr))/(4*sample);
+% h = 1.2* max(abs(gr))/(4*sample);
+h = 0.05617246/sample;
 %fprintf('初始步长: %.4f\n',h)
 % hlist = h;
 % section = 1;

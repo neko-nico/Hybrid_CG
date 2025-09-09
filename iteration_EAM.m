@@ -14,19 +14,17 @@ set(groot, 'defaultTextFontName', 'Times New Roman', 'defaultTextFontSize', 14);
 
 %定义输出文件夹
 folderName = 'Result';
-
 % 如果文件夹不存在，则创建
 if ~exist(folderName, 'dir')
     mkdir(folderName);
 end
-
 
 % 获取当前时间（格式：YYYYmmdd-HHMMSS）
 time_format = datetime('now','Format','MMdd-HHmmss');
 timeStr = char(time_format);   % 转成字符串
 
 % 拼接日志文件名
-logFileName = fullfile(folderName, [timeStr '_log_' '.txt']);
+logFileName = fullfile(folderName, [timeStr '_log' '.txt']);
 % 打开文件（写入模式，若文件已存在则覆盖）
 logfid = fopen(logFileName,'w');
 
@@ -34,6 +32,13 @@ logfid = fopen(logFileName,'w');
 if logfid == -1
     error('无法创建日志文件');
 end
+
+% 保存程序文件副本
+% 获取当前脚本完整路径
+scriptName = [mfilename(), '.m'];
+% 复制并重命名
+copyfile(scriptName, fullfile(folderName, [timeStr, '_', scriptName]));
+fprintf(logfid, '副本已保存，时间戳: %s\n',timeStr);
 
 %系统编号
 systemNum = 1;
@@ -76,7 +81,7 @@ for i = 2:pointsNum
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
-load(fullfile(folderName, ['0908-200624_pointsList_1' '.mat']));
+load(fullfile(folderName, '0909-151346_pointsList_1.mat'));
 
 save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '.mat']),'pointsList')
 
@@ -94,7 +99,7 @@ dlist = dr;
 elist = energy;
 %搜索步长
 h = max(abs(gr))/40;
-fprintf(logfid, '初始步长: %.4f\n',h);
+fprintf(logfid, '初始步长: %.6f\n',h);
 % hlist = h;
 % section = 1;
 nantest = 0; %检测NaN报错
@@ -107,24 +112,47 @@ anglist = 0;
 a = 0;
 b = 0;
 change = 0;%函数值交换用的中间值
-accu = 1;
+accu = 0.1;
 s = 0;
 z = 0;
 w = 0;
 
 %循环次数
 times = 0;
-timeTotal = 0;
+timeTotal = 1;
 
 
 while norm(gr) > 0.005 && times < 500
     times = times + 1;
     fprintf(logfid, '\n第 %d 个点, 总循环数: %d\n',times,timeTotal);
 
-    % if timeTotal == 271
-    %     keyboard;  % 程序暂停，进入调试模式
-    %     fprintf(logfid, '调试模式\n');
-    % end
+    if timeTotal == 289 %&& 0
+
+        %清理log文件夹，保留最后几行
+        fclose(logfid);
+        % 读取整个文件内容
+        logfileContent = fileread(logFileName);
+        lines = regexp(logfileContent, '\r?\n', 'split');  % 按行拆分
+        % 只保留最后 5 行
+        if numel(lines) > 7
+            lines = lines(end-4:end);  % 保留最后 5 行
+        end
+        % 重新写入文件（覆盖模式）
+        logfid = fopen(logFileName, 'w');
+        fprintf(logfid, '%s\n', lines{:});
+        fclose(logfid);
+        % 重新打开文件，继续写入
+        logfid = fopen(logFileName, 'a');
+
+        % 暂停进入调试
+        keyboard;
+
+        % 调试信息
+        %fprintf(logfid, '防止空白bug行\n');
+        fprintf(logfid, '启动调试模式\n');
+
+        %save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '_check.mat']),'pointsList')
+    end
 
     %三阶插值
     t1 = 0;
@@ -132,7 +160,7 @@ while norm(gr) > 0.005 && times < 500
     eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
     f1 = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
     g1 = gr'*dr;
-    fprintf(logfid, 't1: %.8f, f1: %.4f, g1: %.4f, \n',t1,f1,g1);
+    fprintf(logfid, 't1: %.8f, f1: %.6f, g1: %.6f, \n',t1,f1,g1);
 
     if h > 5
         h = 1;
@@ -156,7 +184,7 @@ while norm(gr) > 0.005 && times < 500
         eleDensity = electrondensity(pointsListMid,r0Prm,betaPrm,neighbor,dimension,pointsNum);
         f2 = potential(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
         g2 =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
-        fprintf(logfid, 't2: %.8f, f2: %.4f, g2: %.4f,\n',t2,f2,g2);
+        fprintf(logfid, 't2: %.8f, f2: %.6f, g2: %.6f,\n',t2,f2,g2);
 
         % if abs(g2) < accu %&& abs(g2) < abs(g1)
         %     t1 = t2*2^sign(g1*g2);
@@ -189,7 +217,7 @@ while norm(gr) > 0.005 && times < 500
             eleDensity = electrondensity(pointsListMid,r0Prm,betaPrm,neighbor,dimension,pointsNum);
             fNew = potential(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
             gNew =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
-            fprintf(logfid, '求解出的新点：aNew: %.8f, fNew: %.4f, gNew: %.4f, \n',tNew,fNew,gNew);
+            fprintf(logfid, '求解出的新点：aNew: %.8f, fNew: %.6f, gNew: %.6f, \n',tNew,fNew,gNew);
 
             if ( t1<tNew && tNew<t2 )||( t1>tNew && tNew>t2 )
                 if gNew * g1 > 0 || abs(gNew) < abs(g1)/2
@@ -216,7 +244,7 @@ while norm(gr) > 0.005 && times < 500
                 g1 =  gradient(pointsListMid,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum)'*dr;
                 fprintf(logfid, '三次插值出错，取中点\n');
             end
-        elseif abs(g2) < 10*abs(g1)
+        elseif abs(g2) < 10*abs(g1) %&& g2 > g1
             h = 2*h;
             t1 = t2;
             f1 = f2;
@@ -231,18 +259,21 @@ while norm(gr) > 0.005 && times < 500
         % hlist = [hlist,h];
     end
 
-    if t1 == 0
-        t1 = t1 + h;
+    if limit == 1
+        if t1 == 0
+            t1 = t1 + h;
+        end
+        h = abs(h);
+    else
+        h = abs(t1);
     end
 
-    h = abs(t1);
-    
     k = k + 1;
     % section = [section,timeTotal];
 
     if 1
         %限制最大位移
-        fprintf(logfid, '不限制下最大的移动距离: %.4f\n',max(abs(t1*dr)));
+        fprintf(logfid, '不限制下最大的移动距离: %.6f\n',max(abs(t1*dr)));
         move = t1*dr;
         indicesMax = abs(move) > maxMove;
         move(indicesMax) = sign(move(indicesMax)) * maxMove;
@@ -295,19 +326,19 @@ while norm(gr) > 0.005 && times < 500
     ang = acosd(dot(dr,d_k1)/ (norm(dr)* norm(d_k1)));
     anglist = [anglist, ang];
 
-    fprintf(logfid, '总循环数:%d, 总步长:%.4f, dr变化角度:%.4f\n',timeTotal, t1, ang);
+    fprintf(logfid, '总循环数:%d, 总步长:%.6f, dr变化角度:%.6f\n',timeTotal, t1, ang);
     
 end
 
 neighbor = neighborMatrix(pointsList,rcPrm,dimension,pointsNum);
 eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
 energy = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
-fprintf(logfid, '最终点能量：%.4f,梯度模长：%.6f\n',energy,norm(gr));
+fprintf(logfid, '最终点能量：%.6f,梯度模长：%.6f\n',energy,norm(gr));
 
 recordList = [energy;times;timeTotal;nantest];
 
 % resultfid = fopen('Result.txt','w');
-% fprintf(resultfid,'%d_%.4f_%d_%d_%d\n', systemNum, energy, times, timeTotal,nantest);
+% fprintf(resultfid,'%d_%.6f_%d_%d_%d\n', systemNum, energy, times, timeTotal,nantest);
 % fclose(resultfid);
 
 save(fullfile(folderName, [timeStr '_Result_' num2str(systemNum)]), ...
@@ -320,7 +351,8 @@ if ~exist(dir2pic, 'dir')
 end
 
 % 能量下降曲线
-f1 = figure('Position', [40, 680, 700, 600]);xlist= 1:length(elist);
+f1 = figure('Position', [40, 680, 700, 600]);
+xlist= 1:length(elist);
 elist2 = log(elist-min(elist)+0.001)/log(10);
 plot(xlist,elist2,xlist,elist2,'r.')
 xlabel(['迭代次数,搜索方向改变',num2str(times),'次']), ylabel('体系能量');
@@ -359,11 +391,11 @@ print(f3, [path2pic '.svg'], '-dsvg');
 savefig(f3, [path2pic '.fig']);
 
 
-fprintf(logfid,'\nsystemNum:%d, energy:%.4f, times:%d, timeTotal:%d, nantest:%d\n', ...
+fprintf(logfid,'\nsystemNum:%d, energy:%.6f, times:%d, timeTotal:%d, nantest:%d\n', ...
                 systemNum, energy, times, timeTotal,nantest);
 fprintf(logfid, 'All finish!\n');
 fclose(logfid);
-winopen(fullfile(folderName, [timeStr '_log_' '.txt']));
+winopen(fullfile(folderName, [timeStr '_log' '.txt']));
 %system(['open ', logFile]); for Mac
 %system(['xdg-open ', logFile]); for Linux
 
