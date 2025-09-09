@@ -1,8 +1,8 @@
 %嵌入原子势
 
 clear
-set(0, 'DefaultAxesFontName', '宋体', 'DefaultAxesFontSize', 15);  % 设置坐标轴标签的默认字体和大小
-set(0, 'DefaultTextFontSize', 15);  % 设置文本的默认字体大小
+set(0, 'DefaultAxesFontName', '宋体', 'DefaultAxesFontSize', 18);  % 设置坐标轴标签的默认字体和大小
+set(0, 'DefaultTextFontSize', 18);  % 设置文本的默认字体大小
 
 %体系维数+粒子数目
 dimension = 3;
@@ -42,13 +42,17 @@ for i = 2:pointsNum
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
-load('E:\MatlabProjects\hybrid_CG\Result\0909-152035_pointsList_1.mat');
+fprintf('initial\n')
+
+load('check_pointsList_mid.mat');
 
 neighbor = neighborMatrix(pointsList,rcPrm,dimension,pointsNum);
 eleDensity = electrondensity(pointsList,r0Prm,betaPrm,neighbor,dimension,pointsNum);
 energy = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
 gr = gradient(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
 dr = - gr;
+
+load('check_dr.mat')
 
 %取样点
 sample = 100;
@@ -85,13 +89,14 @@ end
 
 x = 1:length(elist);
 
+f = figure('Position', [740, 680, 800, 600]);
 % 绘制
 yyaxis left
-plot(x, elist, '-o', 'LineWidth', 1.5, 'MarkerSize', 5);
+plot(x, elist, '-', 'LineWidth', 1.5, 'MarkerSize', 5);
 ylabel('函数值');
 
 yyaxis right
-plot(x, drgrList, '-s', 'LineWidth', 1.5, 'MarkerSize', 5);
+plot(x, drgrList, '-', 'LineWidth', 1.5, 'MarkerSize', 5);
 ylabel('方向导数');
 yline(0, '--k', 'LineWidth', 1);  % '--k' 表示黑色虚线
 
