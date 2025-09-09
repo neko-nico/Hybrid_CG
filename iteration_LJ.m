@@ -245,7 +245,7 @@ while norm(gr) > 0.005 && times < 1000
 
     if limit == 1
         if t1 == 0
-            t1 = t1 + h;
+            t1 = h;
         end
         h = abs(h);
     else
