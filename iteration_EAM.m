@@ -82,7 +82,7 @@ for i = 2:pointsNum
 end
 
 % load(fullfile(folderName, '0909-151346_pointsList_1.mat'));
-% load('check_pointsList_origin.mat');
+load('check_pointsList_origin.mat');
 
 save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '.mat']),'pointsList')
 
@@ -113,7 +113,7 @@ anglist = 0;
 a = 0;
 b = 0;
 change = 0;%函数值交换用的中间值
-accu = 0.1;
+accu = 0.2;
 s = 0;
 z = 0;
 w = 0;
@@ -315,12 +315,12 @@ while norm(gr) > 0.005 && times < 500
     glist = [glist, gr];
 
     g_k = gr;
-    y_k1 = g_k - glist(:,k-1);
+    g_k1 = g_k - glist(:,k-1);
     d_k1 = dlist(:,k-1);
 
-    beta_MHS = g_k'* y_k1/ (y_k1'* d_k1)*...
+    beta_MHS = g_k'* g_k1/ (g_k1'* d_k1)*...
                (1- (g_k'* d_k1)^2/ (norm(g_k)^2* norm(d_k1)^2 ));
-    beta_DY = norm(g_k)^2/ (y_k1'* d_k1);
+    beta_DY = norm(g_k)^2/ (g_k1'* d_k1);
     beta_N = max(0,min(beta_DY,beta_MHS));
 
     dr = -(1+ beta_N* (g_k'* d_k1)/ norm(g_k)^2)* g_k+ beta_N*d_k1;

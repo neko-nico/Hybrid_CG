@@ -52,7 +52,7 @@ energy = potential(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neig
 gr = gradient(pointsList,r0Prm,E0Prm,Phi0Prm,alphaPrm,betaPrm,gammaPrm,neighbor,eleDensity,dimension,pointsNum);
 dr = - gr;
 
-load('check_dr.mat')
+% load('check_dr.mat')
 
 %取样点
 sample = 100;

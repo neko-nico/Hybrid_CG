@@ -76,7 +76,7 @@ for i = 2:pointsNum
     pointsList((i-1)*dimension+1:i*dimension) = randomPoint;
 end
 
-load(fullfile(folderName, '0909-192747_pointsList_1.mat'));
+load(fullfile(folderName, '0910-153138_pointsList_1.mat'));
 % load('pointsList_1.mat');
 
 save(fullfile(folderName, [timeStr, '_', 'pointsList_', num2str(systemNum), '.mat']),'pointsList')
@@ -369,9 +369,12 @@ savefig(f2, [path2pic '.fig']);
 % 搜索方向改变的夹角变化
 f3 = figure('Position', [1440, 680, 700, 600]);
 plot(anglist)
+hold on
+plot(anglist,'r.')
 xlabel('循环次数')     % x轴标签
 ylabel('夹角')   % y轴标签
 title('搜索方向改变角度')  % 图标题
+hold off
 
 path2pic = fullfile(dir2pic, [timeStr '_angle']);
 set(f3,'PaperPositionMode','auto');
